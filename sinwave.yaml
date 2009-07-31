@@ -1,0 +1,44 @@
+#Make a entry for each server you want to tail the log file for
+servers:
+    #one entry per server
+    rails_server:
+        host: your.server.com
+        #uncomment these 2 lines, to set ssh proxy if needed
+        #proxy_host: host_name
+        #proxy_user: username
+        user: rails_user
+        password: rails_password
+        command: tail -f -n0
+        files: /path/to/rails/app/log/production.log
+        parser: rails
+        monitor_categories:
+            #these are all the categories returned by the rails parser
+            sites:
+                order: 2
+                size: 5
+            urls:
+                order: 0
+                size: 15
+            slow requests:
+                order: 1
+                size: 5
+                show: average
+            content:
+                order: 3
+                size: 5
+                show: average 
+            info:
+                order: 0
+                size: 5
+                auto_clean: false
+                show: total
+            users:
+                order: 4
+                size: 5
+            warning:
+                order: 5
+                size: 5
+                show: average
+#Set the screen dimension of the app
+display:
+    dimensions: 1280x720
