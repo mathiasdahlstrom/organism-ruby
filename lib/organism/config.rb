@@ -24,6 +24,27 @@ module Organism
       end
     end
     
+    def list_all_categories
+      all_keys = Array.new
+      @servers.each_value do |server|
+        server.categories.each_key do |key|
+          all_keys << key
+         end
+       end
+       return all_keys    
+    end
+
+    def get_all_entries_for_category category_name
+      all_entries = Array.new
+      @servers.each_value do |server|
+        category = server.categories[category_name]
+        category.elements.each do |entry|
+          all_entries << entry
+        end
+      end
+      return all_entries
+    end
+      
     private
     
     def create_server_sources properties_hash
