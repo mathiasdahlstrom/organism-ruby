@@ -12,6 +12,8 @@ $frame_rate = 25.0
 $node_size = 20.0
 #maxium tree depth, urls deeper does not get drawn
 $max_tree_depth = 4
+#how much each tree depth adds to the y position of the spring
+$y_increment_per_depth = 100
 
 class Hirospring < Processing::App
   attr_accessor :springs
@@ -24,20 +26,64 @@ class Hirospring < Processing::App
     noStroke 
     smooth
     @springs = Hash.new
-   
+    @roots = Array.new
   end
   
   def draw
     @config.do_process
     check_for_nodes
     background 120,120,120
-    @springs.each_value do |spring|
-      spring.update
-      spring.display
+    @roots.each do |spring|
+      draw_spring spring
     end
   end
 
+  def draw_spring spring
+    spring.update
+    spring.display
+    spring.children.each do |child|
+      draw_spring child
+    end
+  end
+  
+  def create_springs name_array
+    parent_key = '/' + name_array[0..-2].join("/")
+    if @springs.has_key? parent_key
+      parent_node = @springs[parent_key]
+      key = '/' + name_array.join('/');
+      node_depth = key.count('/')
+      node = create_node(width/2, (node_depth*$y_increment_per_depth), 0.95)
+      parent_node.children << node
+      node.parent = parent_node
+      node.depth = node_depth
+      @springs[key] = node
+    else
+      if name_array.size > 1
+        #walk up the tree
+        parent_node = create_springs name_array[0..-2]
+        key = '/' + name_array.join('/');
+        node_depth = key.count('/')
+        node = create_node(width/2, (node_depth*$y_increment_per_depth), 0.95)
+        parent_node.children << node
+        node.parent = parent_node
+        key = '/' + name_array.join('/');
+        node.depth = node_depth
+        @springs[key] = node
+      else
+        #root create node
+        key = '/' + name_array.join('/');
+        node_depth = key.count('/')
+        node = create_node(width/2, (node_depth*$y_increment_per_depth), 0.95)
+        node.depth = node_depth
+        @springs[key] = node
+        @roots << node
+      end
+    end
+    return node
+  end
+  
   def check_for_nodes
+    has_new_node = false
     @config.get_all_entries_for_category("urls").each do |entry|
       if !entry.has_key?(:rendered)
          relative_url_without_params = entry[:options][:name].split('?').first
@@ -49,43 +95,15 @@ class Hirospring < Processing::App
             spring.update_pos(15, 0.3)
           else
             spring = create_springs(spring_name_array)
+            has_new_node = true
           end
          end
          entry[:rendered] = true
       end
     end
-  end
-  
-  def create_springs name_array
-    parent_key = '/' + name_array[0..-2].join("/")
-    if @springs.has_key? parent_key
-      parent_node = @springs[parent_key]
-      node = create_node(width/2, height/2, 0.95)
-      parent_node.children << node
-      node.parent = parent_node
-      key = '/' + name_array.join('/');
-      @springs[key] = node
-    else
-      if name_array.size > 1
-        #walk up the tree
-        parent_node = create_springs name_array[0..-2]
-        node = create_node(width/2, height/2, 0.95)
-        parent_node.children << node
-        node.parent = parent_node
-        key = '/' + name_array.join('/');
-        @springs[key] = node
-      else
-        #root create node
-        key = '/' + name_array.join('/');
-        node = create_node(width/2, height/2, 0.95)
-        @springs[key] = node
-      end
+    if has_new_node
+      update_node_pos @roots, (width/@roots.size)/2
     end
-    return node
-  end
-  
-  def mouseReleased
-    @springs[1].update_pos 15, 0.3
   end
   
   def create_node(x, y, scale)
@@ -98,9 +116,21 @@ class Hirospring < Processing::App
     return node
   end
   
+  def update_node_pos nodeArray, width_for_depth
+    if nodeArray.size == 0 || width_for_depth == 0
+      return
+    end
+    x_increment = width_for_depth/nodeArray.size
+    nodeArray.each_index do |index|
+      node = nodeArray[index]
+      node.update_xy x_increment*(index+1), node.ypos
+      update_node_pos node.children, x_increment*(index+1)
+    end
+  end
+  
   class Spring
     #Screen values
-    attr_accessor :xpos, :ypos, :tempxpos, :tempypos, :size, :over, :move, :me
+    attr_accessor :xpos, :ypos, :tempxpos, :tempypos, :size, :over, :move, :me, :depth
 
     #Spring simulation constants 
     attr_accessor :mass, :k, :damp, :rest_posx, :rest_posy
@@ -177,7 +207,13 @@ class Hirospring < Processing::App
       end
     end
 
-
+    def update_xy x, y
+      @xpos = @tempxpos = x; 
+      @ypos = @tempypos = y;
+      @rest_posx = x;
+      @rest_posy = y;
+    end
+    
   end
   
 end
