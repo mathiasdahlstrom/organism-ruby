@@ -27,6 +27,8 @@ class Hirospring < Processing::App
     smooth
     @springs = Hash.new
     @roots = Array.new
+    @text_font = loadFont "Data/Verdana-Bold-12.vlw"
+    textFont @text_font, 12
   end
   
   def draw
@@ -52,7 +54,7 @@ class Hirospring < Processing::App
       parent_node = @springs[parent_key]
       key = '/' + name_array.join('/');
       node_depth = key.count('/')
-      node = create_node(width/2, (node_depth*$y_increment_per_depth), 0.95)
+      node = create_node(width/2, (node_depth*$y_increment_per_depth), 0.95, name_array.last)
       parent_node.children << node
       node.parent = parent_node
       node.depth = node_depth
@@ -63,7 +65,7 @@ class Hirospring < Processing::App
         parent_node = create_springs name_array[0..-2]
         key = '/' + name_array.join('/');
         node_depth = key.count('/')
-        node = create_node(width/2, (node_depth*$y_increment_per_depth), 0.95)
+        node = create_node(width/2, (node_depth*$y_increment_per_depth), 0.95, name_array.last)
         parent_node.children << node
         node.parent = parent_node
         key = '/' + name_array.join('/');
@@ -73,7 +75,7 @@ class Hirospring < Processing::App
         #root create node
         key = '/' + name_array.join('/');
         node_depth = key.count('/')
-        node = create_node(width/2, (node_depth*$y_increment_per_depth), 0.95)
+        node = create_node(width/2, (node_depth*$y_increment_per_depth), 0.95, name_array.last)
         node.depth = node_depth
         @springs[key] = node
         @roots << node
@@ -102,12 +104,15 @@ class Hirospring < Processing::App
       end
     end
     if has_new_node
-      update_node_pos @roots, (width/@roots.size)/2
+      node_width_space = width / @roots.size    
+      @roots.each_index do |index|
+        update_node_pos @roots[index], index*node_width_space, (index+1)*node_width_space
+      end 
     end
   end
   
-  def create_node(x, y, scale)
-    Spring.new(x,  y,  $node_size*scale, 0.98, 9.0, 0.1, 0)
+  def create_node(x, y, scale, name)
+    Spring.new(x,  y,  $node_size*scale, 0.98, 9.0, 0.1, 0, name)
   end
   
   def create_node_with_parent(parentNode, x, y, scale)
@@ -116,15 +121,13 @@ class Hirospring < Processing::App
     return node
   end
   
-  def update_node_pos nodeArray, width_for_depth
-    if nodeArray.size == 0 || width_for_depth == 0
-      return
-    end
-    x_increment = width_for_depth/nodeArray.size
-    nodeArray.each_index do |index|
-      node = nodeArray[index]
-      node.update_xy x_increment*(index+1), node.ypos
-      update_node_pos node.children, x_increment*(index+1)
+  def update_node_pos node, x, x2
+    node.update_xy x + (x2-x)/2, node.ypos
+    if node.children.size > 0
+      node_width_space = (x2-x) / node.children.size
+      node.children.each_index do |index|
+        update_node_pos node.children[index], x + index*node_width_space, x + (index+1)*node_width_space
+      end
     end
   end
   
@@ -138,10 +141,10 @@ class Hirospring < Processing::App
     #Spring simulation variables 
     attr_accessor :velx, :vely, :accel, :force
     
-    attr_accessor :parent,:children
+    attr_accessor :parent,:children,:name
     
     #Constructor
-    def initialize(x,y,s,d,m,k_in,id)
+    def initialize(x,y,s,d,m,k_in,id,name)
       #default screen drawing values
       @children = Array.new
       @size = 20; 
@@ -166,6 +169,7 @@ class Hirospring < Processing::App
       @mass = m; 
       @k = k_in;
       @me = id;
+      @name = name
     end
 
     def update 
@@ -200,10 +204,13 @@ class Hirospring < Processing::App
     end
 
     def display
-      ellipse(tempxpos, tempypos, size, size);
+      if @vely > 0.0014 || @vely < -0.0014
+        text(@name, @tempxpos, @tempypos - 15)
+      end
+      ellipse(@tempxpos, @tempypos, size, size);
       stroke 140
       if !@parent.nil?
-        line(tempxpos, tempypos, @parent.tempxpos, @parent.tempypos)
+        line(@tempxpos, @tempypos, @parent.tempxpos, @parent.tempypos)
       end
     end
 
