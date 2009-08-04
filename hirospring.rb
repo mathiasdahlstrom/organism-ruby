@@ -53,6 +53,9 @@ class Hirospring < Processing::App
     if @springs.has_key? parent_key
       parent_node = @springs[parent_key]
       key = '/' + name_array.join('/');
+      if @springs.has_key? key
+        return @springs[key];
+      end
       node_depth = key.count('/')
       node = create_node(width/2, (node_depth*$y_increment_per_depth), 0.95, name_array.last)
       parent_node.children << node
@@ -64,6 +67,9 @@ class Hirospring < Processing::App
         #walk up the tree
         parent_node = create_springs name_array[0..-2]
         key = '/' + name_array.join('/');
+        if @springs.has_key? key
+          return @springs[key];
+        end
         node_depth = key.count('/')
         node = create_node(width/2, (node_depth*$y_increment_per_depth), 0.95, name_array.last)
         parent_node.children << node
@@ -74,6 +80,9 @@ class Hirospring < Processing::App
       else
         #root create node
         key = '/' + name_array.join('/');
+        if @springs.has_key? key
+          return @springs[key]
+        end
         node_depth = key.count('/')
         node = create_node(width/2, (node_depth*$y_increment_per_depth), 0.95, name_array.last)
         node.depth = node_depth
